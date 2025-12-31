@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{6cd3506f-5227-4126-aca4-320cbfa9e08f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Private\_VoAcademy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FSLShader Include="Shaders\FSL\Basic.vert.fsl">
+      <Filter>Shaders</Filter>
+    </FSLShader>
+    <FSLShader Include="Shaders\FSL\Basic.frag.fsl">
+      <Filter>Shaders</Filter>
+    </FSLShader>
+    <FSLShader Include="Shaders\FSL\Resources.h.fsl">
+      <Filter>Shaders</Filter>
+    </FSLShader>
+    <FSLShader Include="Shaders\FSL\Shaders.list">
+      <Filter>Shaders</Filter>
+    </FSLShader>
+    <FSLShader Include="Shaders\FSL\Skybox.frag.fsl">
+      <Filter>Shaders</Filter>
+    </FSLShader>
+    <FSLShader Include="Shaders\FSL\Skybox.vert.fsl">
+      <Filter>Shaders</Filter>
+    </FSLShader>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Shaders\FSL\Global.srt.h">
+      <Filter>Shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\_VoAcademy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
+    <None Include="GPUCfg\gpu.cfg" />
+  </ItemGroup>
+</Project>

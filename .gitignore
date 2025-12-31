@@ -1,0 +1,56 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.ipch
+*.aps
+*.pch
+*.tlog
+*.lastbuildstate
+*.cache
+
+# Build outputs
+x64/
+*/x64/
+[Bb]in/
+[Bb]uild/
+[Oo]bj/
+*/Debug/
+*/Release/
+*.obj
+*.ilk
+*.pdb
+*.ipdb
+*.iobj
+*.exp
+*.lib
+*.dll
+*.exe
+
+# Forge shader outputs
+**/CompiledShaders/
+**/PipelineCaches/
+**/Shaders/DIRECT3D12/
+**/Shaders/VULKAN/
+**/Shaders/METAL/
+**/Shaders/ORBIS/
+**/Shaders/PROSPERO/
+**/Shaders/XBOX/
+**/Shaders/SCARLETT/
+**/Shaders/SWITCH/
+**/Shaders/ANDROID_VULKAN/
+**/Shaders/QUEST/
+**/*.deps
+**/reload-server.txt
+
+# The Forge art assets
+Art/
+
+# IDE/editor misc
+.vscode/
+*.DS_Store
+Thumbs.db
