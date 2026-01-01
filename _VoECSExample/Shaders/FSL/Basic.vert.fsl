@@ -1,0 +1,30 @@
+#include "Global.srt.h"
+
+STRUCT(VsIn)
+{
+    DATA(float, position, POSITION);
+};
+
+STRUCT(VSOutput)
+{
+    DATA(float4, pos, SV_Position);
+    DATA(float3, color, COLOR0);
+    DATA(float2, uv, TEXCOORD0);
+};
+
+VSOutput VS_MAIN( VsIn In, SV_InstanceID(uint) instanceId) 
+{
+	INIT_MAIN;
+	VSOutput Out;
+    float x = float(int(In.position) / 2);
+    float y = float(fmod(In.position, 2.0));
+    float4 posScale   = instanceBuffer[instanceId].posScale;
+    float4 colorIndex = instanceBuffer[instanceId].colorIndex;
+    Out.pos.x = posScale.x + (x-0.5f) * posScale.z;
+    Out.pos.y = posScale.y + (y-0.5f) * posScale.z;
+    Out.pos.z = 0.0f;
+    Out.pos.w = 1.0f;
+    Out.uv    = float2((x + colorIndex.w)/8.0,1.0-y);
+    Out.color = colorIndex.rgb;
+	RETURN(Out);
+}

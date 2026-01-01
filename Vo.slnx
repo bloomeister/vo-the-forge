@@ -9,4 +9,5 @@
   <Project Path="../the-forge/Examples_3/Unit_Tests/PC_VS2019/Libraries/Renderer/Renderer.vcxproj" Id="db6193e0-3c12-450f-b344-dc4daed8c421" />
   <Project Path="VoGame/VoGame.vcxproj" Id="d968f80b-1e60-4139-95bb-d0ff9080ba60" />
   <Project Path="_VoAcademy/_VoAcademy.vcxproj" Id="5d0bb81e-0140-4466-bbb5-183417739130" />
+  <Project Path="_VoECSExample/_VoECSExample.vcxproj" Id="f829ea6b-e7fe-4eb5-83ab-95ba33e3af82" />
 </Solution>
