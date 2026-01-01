@@ -29,6 +29,21 @@ This sample demonstrates how to structure ECS gameplay (via **flecs**) and rende
   // 4) Create entities (Position + Move + Sprite) and some with AvoidComponent
   // 5) Each frame: ecs_progress(world, deltaTime);
   ```
+- **Macro / typedef cheat sheet (what these names mean):**
+  ```cpp
+  ecs_init()                // create a flecs world
+  // From flecs.h: macro that registers a struct as a component in the world.
+  #define ECS_COMPONENT_DEFINE(world, id_) { ecs_component_desc_t desc = {0}; ... }
+  ecs_id(Type)              // returns the flecs id for a registered component type
+  // From flecs.h: system descriptor (callback + query terms).
+  typedef struct ecs_system_desc_t { ecs_entity_t entity; ecs_query_desc_t query; ecs_iter_action_t callback; ... } ecs_system_desc_t;
+  ecs_system_init(...)      // creates the system from that descriptor
+  // From flecs.h: query descriptor (array of terms + optional DSL expr).
+  typedef struct ecs_query_desc_t { ecs_term_t terms[FLECS_TERM_COUNT_MAX]; const char* expr; ... } ecs_query_desc_t;
+  ecs_query_init(...)       // creates the query object
+  ecs_field(it, T, idx)     // inside a system, fetches the idx-th term as array of T
+  ecs_progress(world, dt)   // runs all systems once with delta time dt
+  ```
 - **Components (data only):**
   ```cpp
   struct PositionComponent { float x, y; };
@@ -189,6 +204,150 @@ Here’s a pragmatic way to keep ECS code tidy as a project grows (Diablo II / W
   - Centralize queries you reuse (e.g., “enemies in radius”, “net-owned actors”) to avoid drift in term order.
   - Be consistent with term order and `ecs_field` indices; when you change queries, update field access together.
   - For multiplayer, isolate net-sync state into explicit components and run net systems in a predictable phase.
+
+## 9) Entities in this sample (with code)
+
+This demo spawns two archetypes:
+
+- **Sprite entities** (have `PositionComponent`, `MoveComponent`, `SpriteComponent`)
+  ```cpp
+  // Creation in EntityComponentSystem::Init()
+  ecs_entity_t entityId = ecs_new(gECSWorld);
+  PositionComponent position = { x, y };
+  MoveComponent     move     = createMoveComponent(0.3f, 0.6f);
+  SpriteComponent   sprite   = { /*color*/1,1,1, /*spriteIndex*/randomInt(0,5), /*scale*/0.5f };
+
+  ecs_set(gECSWorld, entityId, PositionComponent, position);
+  ecs_set(gECSWorld, entityId, MoveComponent, move);
+  ecs_set(gECSWorld, entityId, SpriteComponent, sprite);
+  ```
+
+- **Avoid entities** (add `AvoidComponent` so others bounce off them)
+  ```cpp
+  ecs_entity_t entityId = ecs_new(gECSWorld);
+  PositionComponent position = { x * 0.2f, y * 0.2f };
+  MoveComponent     move     = createMoveComponent(0.3f, 0.6f);
+  SpriteComponent   sprite   = { randomFloat(0.5f,1.0f), randomFloat(0.5f,1.0f),
+                                randomFloat(0.5f,1.0f), /*spriteIndex*/5, /*scale*/1.0f };
+  AvoidComponent    avoid    = { 1.3f * 1.3f };
+
+  ecs_set(gECSWorld, entityId, PositionComponent, position);
+  ecs_set(gECSWorld, entityId, MoveComponent, move);
+  ecs_set(gECSWorld, entityId, SpriteComponent, sprite);
+  ecs_set(gECSWorld, entityId, AvoidComponent, avoid);
+  ```
+
+Related code:
+- Component structs: `PositionComponent`, `MoveComponent`, `SpriteComponent`, `AvoidComponent`.
+- Queries: `gECSSpriteQuery` selects Position + Move + Sprite; `gECSAvoidQuery` selects Position + Sprite + Avoid.
+- Systems: `MoveSystem` integrates position; `AvoidanceSystem` reacts to avoiders.
+
+**FAQ: How do you “refer” to entities if they’re just IDs?**  
+Entities are IDs, but their meaning comes from the components they carry. A sprite entity and an avoid entity are both just IDs; what makes them different is that avoid entities *also* have `AvoidComponent`, so queries/systems can select them separately. You generally don’t hard-code IDs—use queries to find the sets you need (e.g., `gECSSpriteQuery` vs `gECSAvoidQuery`) or store an `ecs_entity_t` handle if you must keep a reference. The ID value (0/1/etc.) isn’t used to distinguish types; the attached components are.
+
+Example of “referring” to entities via queries:
+```cpp
+// Iterate sprites (Position + Move + Sprite)
+ecs_iter_t it = ecs_query_iter(gECSWorld, gECSSpriteQuery);
+while (ecs_query_next(&it)) {
+    // This batch gives you the entities and their components:
+    const ecs_entity_t* ents = it.entities;          // array of IDs
+    PositionComponent* pos   = ecs_field(&it, PositionComponent, 1);
+    MoveComponent*     mv    = ecs_field(&it, MoveComponent, 2);
+    SpriteComponent*   spr   = ecs_field(&it, SpriteComponent, 3);
+    // work with the batch...
+}
+
+// If you need to keep a handle:
+ecs_entity_t e = ecs_new(gECSWorld);
+// ... later, you can add/remove/query components on 'e'
+```
+
+**Performance note (ECS vs OOP):**  
+You don’t “while-loop per entity” to hunt one object; ECS is fast because queries return contiguous batches of components, and systems process many entities in one cache-friendly pass. Per-entity random access is discouraged—prefer queries/iterators for bulk work. When you must touch one entity, keep its `ecs_entity_t` handle and use `ecs_has/ecs_get/ecs_add/ecs_remove` directly; otherwise rely on systems + queries for the hot paths.
+
+**Example: read characters’ positions by handle**
+```cpp
+// Suppose you stored the entity ids when you spawned characters:
+ecs_entity_t characterA = ecs_new(gECSWorld);
+ecs_entity_t characterB = ecs_new(gECSWorld);
+ecs_set(gECSWorld, characterA, PositionComponent, { 0.0f, 0.0f });
+ecs_set(gECSWorld, characterB, PositionComponent, { 5.0f, 2.0f });
+// ... later, to read or update:
+PositionComponent* posA = ecs_get_mut(gECSWorld, characterA, PositionComponent);
+PositionComponent* posB = ecs_get_mut(gECSWorld, characterB, PositionComponent);
+if (posA && posB) {
+    float ax = posA->x, ay = posA->y;
+    float bx = posB->x, by = posB->y;
+    // update or read as needed
+}
+```
+Prefer queries for bulk work, but for one-off lookups you can use the handle directly as above.
+
+**What does “mut” mean? Is there an immutable version?**  
+- The “mut” suffix stands for “mutable.” `ecs_get_mut` returns a writable pointer (and adds the component if missing).  
+- For read-only access, use `ecs_get(world, entity, Component)` and bind to `const Component*`.  
+- For stable read-only pointers across ticks, use refs: `ecs_ref_t ref = ecs_ref_init(world, entity, ecs_id(Component));` then `const Component* c = ecs_ref_get(world, &ref, Component);`. There is no `ecs_get_imt`; `ecs_get`/`ecs_ref_get` are the read-only paths.
+
+**Everything is “just an entity”**  
+An entity is only an ID. Its “type” comes from the components attached to that ID. Two entities are considered the same “kind” because they share the same component set, not because they share a class. Systems/queries group and process entities by matching component signatures.
+
+**Example: “This skill affects all animals”**  
+Give “animal” a tag component and query for it when applying the skill:
+```cpp
+// Declare a tag (no data)
+struct AnimalTag { };
+ECS_COMPONENT_DEFINE(gECSWorld, AnimalTag);
+
+// When spawning an animal entity:
+ecs_entity_t wolf = ecs_new(gECSWorld);
+ecs_set(gECSWorld, wolf, PositionComponent, { /*...*/ });
+ecs_set(gECSWorld, wolf, SpriteComponent,  { /*...*/ });
+ecs_add(gECSWorld, wolf, AnimalTag); // mark as animal
+
+// Skill system/query: select entities with AnimalTag
+ecs_query_desc_t skillQuery = {};
+skillQuery.terms[0].id = ecs_id(AnimalTag);
+gSkillQuery = ecs_query_init(gECSWorld, &skillQuery);
+
+// Apply skill to all animals
+ecs_iter_t it = ecs_query_iter(gECSWorld, gSkillQuery);
+while (ecs_query_next(&it)) {
+    const ecs_entity_t* ents = it.entities;
+    // apply effect to all animals in this batch
+}
+```
+By tagging entities (AnimalTag, UndeadTag, BossTag, etc.) you can target groups with queries rather than hard-coding IDs.
+
+**How do I refer to a specific component or system?**  
+- Components: use `ecs_id(ComponentType)` as the handle, and `ecs_has/ecs_get/ecs_get_mut/ecs_add/ecs_remove` to check/read/write on any entity.  
+- Systems: `ecs_system_init` returns an `ecs_entity_t` for the system; store it if you want to enable/disable or tweak it later:
+  ```cpp
+  ecs_system_desc_t desc = { .callback = MoveSystem };
+  desc.query.terms[0].id = ecs_id(PositionComponent);
+  desc.query.terms[1].id = ecs_id(MoveComponent);
+  ecs_entity_t moveSys = ecs_system_init(gECSWorld, &desc);
+
+  // Later: disable/enable by id, or look up by name with ecs_lookup(world, "MoveSystem")
+  ecs_enable(gECSWorld, moveSys, false); // disable
+  ecs_enable(gECSWorld, moveSys, true);  // enable
+  ```
+
+**Are components/systems entities too?**  
+Yes. Flecs represents components, systems, and tags as entities under the hood. You normally access them via helpers (`ecs_id(ComponentType)`, the return value from `ecs_system_init`), but they all have an entity id in the world.
+
+**Analogy:** It’s a bit like JavaScript’s “everything is an object” mindset: in Flecs “everything is an entity.” The differentiation comes from which components (data) are attached, not from distinct class types.
+
+## 10) If you did this with OOP classes (and why ECS instead)
+
+You could build this sample with a `class Entity { Position pos; Velocity vel; Sprite sprite; ... }` and subclass for avoiders. That works for small projects, but:
+
+- **OOP pros:** Familiar; per-object methods; easy to encapsulate behavior.
+- **OOP cons:** Data for many objects scatters in memory (poor cache use); inheritance hierarchies get brittle; behavior tied to classes makes bulk operations harder.
+- **ECS pros:** Data-oriented (arrays of components → cache-friendly); systems operate on batches; composition over inheritance (just add/remove components); easy to query “all X with Y but not Z.”
+- **ECS cons:** You think in terms of data + queries (less familiar if you come from OOP); per-entity, one-off access can feel indirect; requires discipline to keep queries/fields in sync.
+
+For a few objects, OOP is fine. For thousands of similar entities updated every frame (like this sprite swarm), ECS tends to be faster and simpler to extend (e.g., add a tag to include/exclude entities from a system).
 
 ## 5) Debugging tips
 
